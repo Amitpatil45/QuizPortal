@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.examportal.exception.DataValidationException;
 import com.examportal.exception.GenericResponse;
+import com.examportal.model.exam.Category;
 import com.examportal.model.exam.CorrectOption;
 import com.examportal.model.exam.Question;
 import com.examportal.model.exam.QuestionDto;
@@ -20,6 +21,8 @@ import com.examportal.model.exam.Quiz;
 import com.examportal.model.exam.QuizDto;
 import com.examportal.model.exam.UserActiveQuizDTO;
 import com.examportal.model.exam.UserQuizAnswersDTO;
+import com.examportal.model.repo.CategoryRepository;
+import com.examportal.model.repo.QuestionRepository;
 import com.examportal.model.repo.QuizRepository;
 import com.examportal.services.QuizService;
 
@@ -27,6 +30,10 @@ import com.examportal.services.QuizService;
 public class QuizServiceImpl implements QuizService {
 	@Autowired
 	private QuizRepository quizRepository;
+	@Autowired
+	private CategoryRepository categoryRepository;
+	@Autowired
+	private QuestionRepository questionRepository;
 
 	@Override
 	public GenericResponse addQuiz(Quiz quiz) throws Exception {
@@ -39,9 +46,14 @@ public class QuizServiceImpl implements QuizService {
 		if (quiz.getCategory() == null || quiz.getCategory().getId() == null) {
 			throw new DataValidationException("Please select a category for the quiz.");
 		}
-
+		
 		if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
 			throw new DataValidationException("Please provide a list of questions for the quiz.");
+		}
+		
+		Optional<Category> optionalCategory = categoryRepository.findById(quiz.getCategory().getId());
+		if (optionalCategory.isEmpty()) {
+			throw new DataValidationException("Category not found");
 		}
 
 		Quiz quizUnique = quizRepository.findByTitle(quiz.getTitle());
@@ -51,6 +63,31 @@ public class QuizServiceImpl implements QuizService {
 		}
 		
 		
+		Question question;
+		Optional<Question> optionalQuestion = questionRepository.findById(question.getId());
+		if (optionalQuestion.isEmpty()) {
+			throw new DataValidationException("Question not Available.");
+		}
+		
+		List<Question> uniqueQuestions = new ArrayList<>();
+		for(Question question : quiz.getQuestions()) {
+			
+			Optional<Question> optionalQuestion = questionRepository.findById(question.getId());
+			if (optionalQuestion.isEmpty()) {
+				throw new DataValidationException("Question not Available.");
+			}
+
+
+			if(uniqueQuestions.contains(question)) {
+				throw new DataValidationException("Questions Are Repited.");
+			}
+			if(!question.getCategory().equals(quiz.getCategory())){
+				throw new DataValidationException("Question is not present in the category");
+
+			}
+		}
+		
+
 
 		quizRepository.save(quiz);
 		return new GenericResponse(201, "Created Succesfully");
@@ -70,6 +107,14 @@ public class QuizServiceImpl implements QuizService {
 			quiz.setTitle(quiz.getTitle().trim());
 		}
 
+		if (quiz.getCategory() == null || quiz.getCategory().getId() == null) {
+			throw new DataValidationException("Select a category for the question.");
+		}
+		Optional<Category> optionalCategory = categoryRepository.findById(quiz.getCategory().getId());
+		if (optionalCategory.isEmpty()) {
+			throw new DataValidationException("Category not found");
+		}
+
 		if (!titalUnique(quiz.getTitle(), quizId)) {
 			throw new DataValidationException("Quiz With Same Tital is Already present");
 
@@ -78,12 +123,6 @@ public class QuizServiceImpl implements QuizService {
 		if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
 			throw new DataValidationException("Please provide a list of questions for the quiz.");
 		}
-
-		if (quiz.getCategory() == null || quiz.getCategory().getId() == null) {
-			throw new DataValidationException("Please select a category for the quiz.");
-		}
-
-		
 
 		existingQuiz.setTitle(quiz.getTitle());
 		existingQuiz.setQuestions(quiz.getQuestions());
@@ -195,8 +234,9 @@ public class QuizServiceImpl implements QuizService {
 
 			if (questionOptional.isPresent()) {
 				Question question = questionOptional.get();
-				if(answer != null && answer.equals(question.getCorrectOption())) {
-				//if (answer != null && answer.equalsIgnoreCase(question.getCorrectOption().toString())) {
+				if (answer != null && answer.equals(question.getCorrectOption())) {
+					// if (answer != null &&
+					// answer.equalsIgnoreCase(question.getCorrectOption().toString())) {
 					correctAnswers++;
 				}
 			}

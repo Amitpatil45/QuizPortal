@@ -84,7 +84,7 @@ public class QuestionServiceImpl implements QuestionService {
 		Optional<Question> optionalQuestion = questionRepository.findById(questionId);
 
 		if (optionalQuestion.isEmpty()) {
-			throw new DataValidationException("Question with ID " + questionId + " not found.");
+			throw new DataValidationException("Question not Available.");
 		}
 
 		Question existingQuestion = optionalQuestion.get();
