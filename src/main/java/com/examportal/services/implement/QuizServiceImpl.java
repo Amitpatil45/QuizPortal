@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import com.examportal.exception.DataValidationException;
 import com.examportal.exception.GenericResponse;
 import com.examportal.model.exam.Category;
-import com.examportal.model.exam.CorrectOption;
 import com.examportal.model.exam.Question;
 import com.examportal.model.exam.QuestionDto;
 import com.examportal.model.exam.Quiz;
@@ -46,11 +45,11 @@ public class QuizServiceImpl implements QuizService {
 		if (quiz.getCategory() == null || quiz.getCategory().getId() == null) {
 			throw new DataValidationException("Please select a category for the quiz.");
 		}
-		
+
 		if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
 			throw new DataValidationException("Please provide a list of questions for the quiz.");
 		}
-		
+
 		Optional<Category> optionalCategory = categoryRepository.findById(quiz.getCategory().getId());
 		if (optionalCategory.isEmpty()) {
 			throw new DataValidationException("Category not found");
@@ -61,44 +60,60 @@ public class QuizServiceImpl implements QuizService {
 			throw new DataValidationException("A quiz with this title already exists.");
 
 		}
-		
-		
-		Question question;
-		Optional<Question> optionalQuestion = questionRepository.findById(question.getId());
-		if (optionalQuestion.isEmpty()) {
-			throw new DataValidationException("Question not Available.");
+
+		List<Question> uniqueQuestion = new ArrayList<>();
+
+		for (Question question : quiz.getQuestions()) {
+			if(question.getId() == null ) {
+				throw new DataValidationException("Question is null");
+
+			}
+
+			if (isQuestionRepeted(uniqueQuestion, question)) {
+				throw new DataValidationException("Question are repited");
+
+			}
+
+			if (!isQuestionInCategory(question, quiz.getCategory())) {
+				throw new DataValidationException("Questions are not present in the category");
+
+			}
+
+			uniqueQuestion.add(question);
 		}
-		
-		List<Question> uniqueQuestions = new ArrayList<>();
-		for(Question question : quiz.getQuestions()) {
-			
-			Optional<Question> optionalQuestion = questionRepository.findById(question.getId());
-			if (optionalQuestion.isEmpty()) {
-				throw new DataValidationException("Question not Available.");
-			}
-
-
-			if(uniqueQuestions.contains(question)) {
-				throw new DataValidationException("Questions Are Repited.");
-			}
-			if(!question.getCategory().equals(quiz.getCategory())){
-				throw new DataValidationException("Question is not present in the category");
-
-			}
-		}
-		
-
 
 		quizRepository.save(quiz);
 		return new GenericResponse(201, "Created Succesfully");
 
 	}
 
+	private Boolean isQuestionRepeted(List<Question> questions, Question question) {
+		for (Question existingQuestion : questions) {
+			if (existingQuestion.getId().equals(question.getId())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isQuestionInCategory(Question question, Category category) {
+		Optional<Question> questionOptional = questionRepository.findById(question.getId());
+		if (questionOptional.isEmpty()) {
+			throw new DataValidationException("Question not found");
+		}
+		Question question2 = questionOptional.get();
+		if (question2.getCategory().getId().equals(category.getId())) {
+			return true;
+		}
+
+		return false;
+	}
+
 	@Override
 	public GenericResponse updateQuiz(Quiz quiz, Long quizId) {
 		Optional<Quiz> optionalQuiz = quizRepository.findById(quizId);
 		if (optionalQuiz.isEmpty()) {
-			throw new DataValidationException("Quiz with ID " + quizId + " not found.");
+			throw new DataValidationException("Quiz Not Available");
 		}
 		Quiz existingQuiz = optionalQuiz.get();
 		if (quiz.getTitle() == null || quiz.getTitle().isBlank()) {
@@ -123,6 +138,29 @@ public class QuizServiceImpl implements QuizService {
 		if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
 			throw new DataValidationException("Please provide a list of questions for the quiz.");
 		}
+		
+		List<Question> uniqueQuestion = new ArrayList<>();
+
+		for (Question question : quiz.getQuestions()) {
+			if(question.getId() == null ) {
+				throw new DataValidationException("Question is null");
+
+			}
+
+			if (isQuestionRepeted(uniqueQuestion, question)) {
+				throw new DataValidationException("Question are repited");
+
+			}
+
+			if (!isQuestionInCategory(question, quiz.getCategory())) {
+				throw new DataValidationException("Questions are not present in the category");
+
+			}
+
+			uniqueQuestion.add(question);
+		}
+		
+		
 
 		existingQuiz.setTitle(quiz.getTitle());
 		existingQuiz.setQuestions(quiz.getQuestions());
@@ -140,7 +178,6 @@ public class QuizServiceImpl implements QuizService {
 		}
 
 		return true;
-
 	}
 
 	@Override
@@ -215,35 +252,36 @@ public class QuizServiceImpl implements QuizService {
 	}
 
 	@Override
-	public GenericResponse submitQuizAnswers(Long quizId, List<UserQuizAnswersDTO> userAnswers) {
-		Quiz quiz = quizRepository.findById(quizId).orElse(null);
-		if (quiz == null) {
-			throw new DataValidationException("Quiz Not Available");
-		}
+	public GenericResponse submitQuizAnswers(Long quizId, List<UserQuizAnswersDTO> quizAnswersDtoList) {
+
+		validateQuizResponse(quizId, quizAnswersDtoList);
+		Optional<Quiz> quizOptional = quizRepository.findById(quizId);
+		Quiz quiz = quizOptional.get();
 
 		List<Question> questions = quiz.getQuestions();
-		int totalQuestions = questions.size();
-		int correctAnswers = 0;
+		Long correctAnswers = (long) 0;
 
-		for (UserQuizAnswersDTO userAnswer : userAnswers) {
-			Long questionId = userAnswer.getQuestionId();
-			CorrectOption answer = userAnswer.getUserAnswer();
-
-			Optional<Question> questionOptional = questions.stream().filter(q -> q.getId().equals(questionId))
-					.findFirst();
-
-			if (questionOptional.isPresent()) {
-				Question question = questionOptional.get();
-				if (answer != null && answer.equals(question.getCorrectOption())) {
-					// if (answer != null &&
-					// answer.equalsIgnoreCase(question.getCorrectOption().toString())) {
-					correctAnswers++;
-				}
+		for (UserQuizAnswersDTO userQuizAnswersDTO : quizAnswersDtoList) {
+			Optional<Question> questionOptional = questionRepository.findById(userQuizAnswersDTO.getQuestionId());
+			if (questionOptional.isEmpty()) {
+				throw new DataValidationException(" Question  not available");
 			}
-		}
+			Question question = questionOptional.get();
+			question.getCorrectOption().equals(userQuizAnswersDTO.getUserAnswer());
+			correctAnswers++;
 
-		String score = correctAnswers + "/" + totalQuestions;
-		return new GenericResponse(200, "Score = " + score);
+		}
+		String result = "Correct Answers : " + correctAnswers + "  /   " + "Total Question : " + questions.size();
+
+		return new GenericResponse(200, result);
+
+	}
+
+	private void validateQuizResponse(Long quizId, List<UserQuizAnswersDTO> quizAnswersDtoList) {
+		Optional<Quiz> quizOptional = quizRepository.findById(quizId);
+		if (quizOptional.isEmpty()) {
+			throw new DataValidationException("Quiz Not Available");
+		}
 	}
 
 }

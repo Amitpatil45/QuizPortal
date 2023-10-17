@@ -89,7 +89,7 @@ public class QuizController {
 	}
 
 	@PostMapping("/submit/{quizId}")
-	public ResponseEntity<GenericResponse> submitQuizAnswers(@PathVariable("quizId") Long quizId,
+	public ResponseEntity<GenericResponse> submitQuizAnswers(@PathVariable Long quizId,
 			@RequestBody List<UserQuizAnswersDTO> userAnswers) {
 		GenericResponse response = quizService.submitQuizAnswers(quizId, userAnswers);
 		return new ResponseEntity<>(response, HttpStatus.OK);

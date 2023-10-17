@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class Question {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	private String content;
@@ -108,5 +108,6 @@ public class Question {
 		super();
 		// TODO Auto-generated constructor stub
 	}
+	
 
 }
