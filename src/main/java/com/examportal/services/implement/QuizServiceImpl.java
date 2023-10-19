@@ -64,7 +64,7 @@ public class QuizServiceImpl implements QuizService {
 		List<Question> uniqueQuestion = new ArrayList<>();
 
 		for (Question question : quiz.getQuestions()) {
-			if(question.getId() == null ) {
+			if (question.getId() == null) {
 				throw new DataValidationException("Question is null");
 
 			}
@@ -138,11 +138,11 @@ public class QuizServiceImpl implements QuizService {
 		if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
 			throw new DataValidationException("Please provide a list of questions for the quiz.");
 		}
-		
+
 		List<Question> uniqueQuestion = new ArrayList<>();
 
 		for (Question question : quiz.getQuestions()) {
-			if(question.getId() == null ) {
+			if (question.getId() == null) {
 				throw new DataValidationException("Question is null");
 
 			}
@@ -159,8 +159,6 @@ public class QuizServiceImpl implements QuizService {
 
 			uniqueQuestion.add(question);
 		}
-		
-		
 
 		existingQuiz.setTitle(quiz.getTitle());
 		existingQuiz.setQuestions(quiz.getQuestions());
@@ -246,7 +244,6 @@ public class QuizServiceImpl implements QuizService {
 		}
 
 		quizDto.setQuestions(questionDtos);
-
 		return quizDto;
 
 	}
@@ -267,14 +264,13 @@ public class QuizServiceImpl implements QuizService {
 				throw new DataValidationException(" Question  not available");
 			}
 			Question question = questionOptional.get();
-			question.getCorrectOption().equals(userQuizAnswersDTO.getUserAnswer());
-			correctAnswers++;
 
+			if (question.getCorrectOption().equals(userQuizAnswersDTO.getUserAnswer())) {
+				correctAnswers++;
+			}
 		}
 		String result = "Correct Answers : " + correctAnswers + "  /   " + "Total Question : " + questions.size();
-
 		return new GenericResponse(200, result);
-
 	}
 
 	private void validateQuizResponse(Long quizId, List<UserQuizAnswersDTO> quizAnswersDtoList) {
